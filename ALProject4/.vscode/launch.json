@@ -8,7 +8,7 @@
             "server": "https://businesscentral.dynamics.com/0dba8bb1-b163-4dca-9a37-d6f2c4666669",
             "serverInstance": "W1",
             "schemaUpdateMode": "ForceSync",
-            "startupObjectId": 22,
+            "startupObjectId": 50001,
             "startupObjectType": "Page",
             "breakOnError": false
         }

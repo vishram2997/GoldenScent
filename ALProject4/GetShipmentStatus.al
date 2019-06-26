@@ -2,24 +2,85 @@ Codeunit 50001 ProcessShipment
 {
     trigger OnRun();
     var
-        HttpClinet: HttpClient;
-        ResponseMessag: HttpResponseMessage;
+
+    begin
+
+    end;
+
+    local procedure UpdateShipmentTracking()
+    var
         JsonToken: JsonToken;
         JsonValue: JsonValue;
         JsonArray: JsonArray;
+        trackingLine: JsonToken;
+        entity_id: JsonToken;
+        increment_id: JsonToken;
+        parent_id: JsonToken;
+        order_id: JsonToken;
+        track_number: JsonToken;
+        carrier_code: JsonToken;
+        label_url: JsonToken;
         JsonResponse: JsonObject;
+        request: Text;
+        whsShipment: Record "Warehouse Shipment Header";
+        awbIntegration: Record AWBIntegration;
+        responseSample: Text;
+        i: Integer;
+    begin
+
+        whsShipment.Reset();
+        if whsShipment.FindSet then
+            repeat
+                awbIntegration.Reset;
+                awbIntegration.SetRange(whsShipmentNo, whsShipment."No.");
+                if not awbIntegration.FindFirst then begin
+                    //responseSample := getHttpResponse('https://sandbox.goldenscent.com/api/rest/', 'shipment', request);
+                    JsonResponse.ReadFrom(responseSample);
+                    //JsonToken.ReadFrom(responseText);
+                    //JsonToken.SelectToken('increment_id', JsonToken);
+
+                    //parsing json response
+                    JsonResponse.SelectToken('_shipment_tracks', JsonToken);
+                    JsonArray := JsonToken.AsArray();
+                    JsonResponse.SelectToken('increment_id', increment_id);
+                    for i := 0 to JsonArray.Count - 1 do begin
+                        JsonArray.Get(i, trackingLine);
+                        JsonResponse := trackingLine.AsObject();
+                        JsonResponse.Get('entity_id', entity_id);
+                        JsonResponse.Get('parent_id', parent_id);
+                        JsonResponse.Get('order_id', order_id);
+                        JsonResponse.Get('track_number', track_number);
+                        JsonResponse.Get('carrier_code', carrier_code);
+                        JsonResponse.Get('label_url', label_url);
+
+                        //insert into awbIntegration
+                        awbIntegration.Init();
+                        awbIntegration.increment_id := increment_id.AsValue().AsText();
+                        awbIntegration.whsShipmentNo := whsShipment."No.";
+                        awbIntegration.entity_id := entity_id.AsValue().AsText();
+                        awbIntegration.order_id := order_id.AsValue().AsText();
+                        awbIntegration.parent_id := parent_id.AsValue().AsText();
+                        awbIntegration.track_number := track_number.AsValue().AsText();
+                        awbIntegration.carrier_code := carrier_code.AsValue().AsText();
+                        awbIntegration.label_url := label_url.AsValue().AsText();
+                        awbIntegration.Insert()
+                    end;  //for end
+
+                end;
+            until whsShipment.Next = 0;
+
+    end;
+
+    local procedure getHttpResponse(url: Text; endpoint: Text; request: Text): Text
+    var
         consumerKey: Text;
         consumerSecret: Text;
         accessToken: Text;
         accessSecret: Text;
-        url: Text;
-        endpoint: Text;
-        request: Text;
         content: HttpContent;
         responseText: Text;
-        whsShipment: Record "Warehouse Shipment Header";
-        awbIntegration: Record AWBIntegration;
-        responseSample: Text;
+        HttpClinet: HttpClient;
+        ResponseMessag: HttpResponseMessage;
     begin
         consumerKey := 'fc5d2e831b5df9aef116c51bb39aaf83';
         consumerSecret := '39250ee648c18636efe54557cf636db0';
@@ -29,22 +90,17 @@ Codeunit 50001 ProcessShipment
         endpoint := 'shipments';
         request := '{"increment_id":"200443116","carrier":"smsa","items_qty":["SA1677203-1"]}';
 
-        whsShipment.Reset();
+        //whsShipment.Reset();
         //whsShipment.
-        responseSample := '{"entity_id":"352924","shipment_status":null,"increment_id":"200342712","created_at":"2019-05-29 12:09:14","_shipment_tracks":[{"entity_id":"336664","parent_id":"352924","order_id":"457446","track_number":"290044691313","description":null,"title":"SMSA Express","carrier_code":"smsa-express","label_url":"https://s3-eu-west-1.amazonaws.com/gs-euw1-magento-assets-dev/smsaprinting/352924-290044691313.pdf"}]}';
 
         content.WriteFrom(request);
 
         HttpClinet.Post(url + endpoint + '?oauth_consumer_key=' + consumerKey + '&oauth_token=' + accessToken
-                    + '&oauth_signature_method=PLAINTEXT&oauth_signature=' + consumerSecret +
-                    '%26' + accessSecret, content, ResponseMessag);
+                  + '&oauth_signature_method=PLAINTEXT&oauth_signature=' + consumerSecret +
+                '%26' + accessSecret, content, ResponseMessag);
         ResponseMessag.Content.ReadAs(responseText);
-
-        JsonResponse.ReadFrom(responseSample);
-        JsonToken.ReadFrom(responseText);
-
+        exit(responseText);
 
     end;
-
 
 }

@@ -6,6 +6,8 @@ pageextension 50100 CustomerListExt extends "Customer List"
 {
     trigger OnOpenPage();
     begin
-        Message('App published: Hello world');
+        Codeunit.Run(50001);
+        Page.Run(50001);
+        //Message('App published: Hello world');
     end;
 }
