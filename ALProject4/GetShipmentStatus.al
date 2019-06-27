@@ -26,15 +26,31 @@ Codeunit 50001 ProcessShipment
         awbIntegration: Record AWBIntegration;
         responseSample: Text;
         i: Integer;
+        whsShipmentLine: Record "Warehouse Shipment Line";
+        itemsInShipment: Text;
+        carrier: Text;
     begin
 
         whsShipment.Reset();
+        whsShipment.SetRange("Completely Picked", true);
         if whsShipment.FindSet then
             repeat
+                if whsShipment."Location Code" = 'DXB' then
+                    carrier := 'Aramex'
+                else
+                    carrier := 'smsa';
+
                 awbIntegration.Reset;
                 awbIntegration.SetRange(whsShipmentNo, whsShipment."No.");
                 if not awbIntegration.FindFirst then begin
-                    //responseSample := getHttpResponse('https://sandbox.goldenscent.com/api/rest/', 'shipment', request);
+                    whsShipmentLine.Reset();
+                    whsShipmentLine.SetRange("No.", whsShipment."No.");
+                    if whsShipmentLine.FindFirst() then
+                        repeat
+                            itemsInShipment := itemsInShipment + '-' + Format(whsShipmentLine."Qty. (Base)") + ';';
+                        until whsShipmentLine.Next() = 0;
+                    request := '{"increment_id":"' + format(whsShipment."No.") + '","carrier":"' + carrier + '","items_qty":["' + itemsInShipment + '"]}';
+                    responseSample := getHttpResponse('https://sandbox.goldenscent.com/api/rest/', 'shipment', request);
                     JsonResponse.ReadFrom(responseSample);
                     //JsonToken.ReadFrom(responseText);
                     //JsonToken.SelectToken('increment_id', JsonToken);
